@@ -101,6 +101,7 @@ class Thumbnailer {
   };
 
   static Future<PdfPageImage> _buildPdf(Uint8List resolvedData, RootIsolateToken rootIsolateToken) async {
+    BackgroundIsolateBinaryMessenger.ensureInitialized(rootIsolateToken);
     final PdfDocument document = await PdfDocument.openData(resolvedData);
     final PdfPage page = await document.getPage(1);
     final PdfPageImage pageImage = (await page.render(
@@ -112,7 +113,7 @@ class Thumbnailer {
       page.close(),
       document.close(),
     ]);
-    BackgroundIsolateBinaryMessenger.ensureInitialized(rootIsolateToken);
+
     return pageImage;
   }
 
@@ -146,8 +147,7 @@ class Thumbnailer {
       WidgetDecoration? widgetDecoration,
     ) async {
       final Uint8List resolvedData = await getData();
-      final RootIsolateToken token = ServicesBinding.rootIsolateToken!;
-      BackgroundIsolateBinaryMessenger.ensureInitialized(token);
+      final RootIsolateToken token = RootIsolateToken.instance!;
       final PdfPageImage pageImage = await Isolate.run(() async => _buildPdf(resolvedData, token));
       return Center(
         child: Image.memory(
