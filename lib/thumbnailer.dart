@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:spreadsheet_decoder/spreadsheet_decoder.dart';
@@ -99,7 +100,7 @@ class Thumbnailer {
     'default': FontAwesomeIcons.file,
   };
 
-  static Future<PdfPageImage> _buildPdf(Uint8List resolvedData) async {
+  static Future<PdfPageImage> _buildPdf(Uint8List resolvedData, RootIsolateToken rootIsolateToken) async {
     final PdfDocument document = await PdfDocument.openData(resolvedData);
     final PdfPage page = await document.getPage(1);
     final PdfPageImage pageImage = (await page.render(
@@ -111,6 +112,7 @@ class Thumbnailer {
       page.close(),
       document.close(),
     ]);
+    BackgroundIsolateBinaryMessenger.ensureInitialized(rootIsolateToken);
     return pageImage;
   }
 
@@ -144,7 +146,8 @@ class Thumbnailer {
       WidgetDecoration? widgetDecoration,
     ) async {
       final Uint8List resolvedData = await getData();
-      final PdfPageImage pageImage = await Isolate.run(() async => _buildPdf(resolvedData));
+      final RootIsolateToken token = ServicesBinding.rootIsolateToken!;
+      final PdfPageImage pageImage = await Isolate.run(() async => _buildPdf(resolvedData, token));
       return Center(
         child: Image.memory(
           pageImage.bytes,
