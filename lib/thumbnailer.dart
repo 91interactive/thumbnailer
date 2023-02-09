@@ -1,9 +1,12 @@
 import 'dart:async';
+// import 'dart:html';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:spreadsheet_decoder/spreadsheet_decoder.dart';
 
@@ -108,6 +111,7 @@ class Thumbnailer {
       DataResolvingFunction getData,
       double widgetSize,
       WidgetDecoration? widgetDecoration,
+      String? key,
     ) async {
       final Uint8List resolvedData = await getData();
       return Center(
@@ -127,7 +131,15 @@ class Thumbnailer {
       DataResolvingFunction getData,
       double widgetSize,
       WidgetDecoration? widgetDecoration,
+      String? key,
     ) async {
+      final String cachePath = "${await getApplicationSupportDirectory()}/thumbnails/${key}.jpg";
+      {
+        File file = File(cachePath);
+        if (await file.exists()) {
+          return Center(child: Image.file(file, width: widgetSize, fit: BoxFit.fitWidth, semanticLabel: name));
+        }
+      }
       final Uint8List resolvedData = await getData();
       final PdfDocument document = await PdfDocument.openData(resolvedData);
       final PdfPage page = await document.getPage(1);
@@ -142,6 +154,8 @@ class Thumbnailer {
         page.close(),
         document.close(),
       ]);
+      File file = File(cachePath);
+      unawaited(file.writeAsBytes(pageImage.bytes));
       debugPrint("ThumbnailSize: ${pageImage.bytes.length}");
       return Center(
         child: Image.memory(
@@ -160,6 +174,7 @@ class Thumbnailer {
       DataResolvingFunction getData,
       double widgetSize,
       WidgetDecoration? decoration,
+      String? key,
     ) =>
         _xlsxAndOdsCreationStrategy(
           name,
@@ -176,6 +191,7 @@ class Thumbnailer {
       DataResolvingFunction getData,
       double widgetSize,
       WidgetDecoration? decoration,
+      String? key,
     ) =>
         _xlsxAndOdsCreationStrategy(
           name,
@@ -364,6 +380,7 @@ class Thumbnail extends StatefulWidget {
     this.useWaterMark,
     this.useWrapper,
     this.onlyName,
+    this.thumbnailKey,
   }) : super(key: key);
 
   /// If non-null, the style to use for this thumbnail.
@@ -396,6 +413,8 @@ class Thumbnail extends StatefulWidget {
   /// Show only name for watermark thumbnail
   final bool? onlyName;
 
+  final String? thumbnailKey;
+
   @override
   ThumbnailState createState() => ThumbnailState();
 }
@@ -421,6 +440,7 @@ class ThumbnailState extends State<Thumbnail> {
         widget.dataResolver!,
         widget.widgetSize,
         widget.decoration,
+        widget.thumbnailKey,
       );
     }
   }
@@ -663,6 +683,7 @@ typedef GenerationStrategyFunction = Future<Widget> Function(
   DataResolvingFunction dataResolver,
   double widgetSize,
   WidgetDecoration? decoration,
+  String? key,
 );
 
 /// type definitions for functions delivering raw binary data used for thumbnail generation
