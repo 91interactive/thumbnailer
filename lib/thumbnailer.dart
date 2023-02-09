@@ -133,7 +133,7 @@ class Thumbnailer {
       WidgetDecoration? widgetDecoration,
       String? key,
     ) async {
-      final String cachePath = "${await getApplicationSupportDirectory()}/thumbnails/${key}.jpg";
+      final String cachePath = "${(await getApplicationSupportDirectory()).path}/thumbnails/${key}.jpg";
       if (key != null) {
         // try load file if there is a key
         File file = File(cachePath);
@@ -157,7 +157,9 @@ class Thumbnailer {
       ]);
       if (key != null) {
         // savefile if it has a key
+        debugPrint("creating cache file at: $cachePath");
         File file = File(cachePath);
+        await file.create(recursive: true);
         unawaited(file.writeAsBytes(pageImage.bytes));
       }
       debugPrint("ThumbnailSize: ${pageImage.bytes.length}");
