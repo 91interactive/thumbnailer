@@ -157,12 +157,12 @@ class Thumbnailer {
       ]);
       if (key != null) {
         // savefile if it has a key
-        debugPrint("creating cache file at: $cachePath");
+        // debugPrint("creating cache file at: $cachePath");
         File file = File(cachePath);
         await file.create(recursive: true);
         unawaited(file.writeAsBytes(pageImage.bytes));
       }
-      debugPrint("ThumbnailSize: ${pageImage.bytes.length}");
+      // debugPrint("ThumbnailSize: ${pageImage.bytes.length}");
       return Center(
         child: Image.memory(
           pageImage.bytes,
