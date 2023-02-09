@@ -134,7 +134,8 @@ class Thumbnailer {
       String? key,
     ) async {
       final String cachePath = "${await getApplicationSupportDirectory()}/thumbnails/${key}.jpg";
-      {
+      if (key != null) {
+        // try load file if there is a key
         File file = File(cachePath);
         if (await file.exists()) {
           return Center(child: Image.file(file, width: widgetSize, fit: BoxFit.fitWidth, semanticLabel: name));
@@ -154,8 +155,11 @@ class Thumbnailer {
         page.close(),
         document.close(),
       ]);
-      File file = File(cachePath);
-      unawaited(file.writeAsBytes(pageImage.bytes));
+      if (key != null) {
+        // savefile if it has a key
+        File file = File(cachePath);
+        unawaited(file.writeAsBytes(pageImage.bytes));
+      }
       debugPrint("ThumbnailSize: ${pageImage.bytes.length}");
       return Center(
         child: Image.memory(
