@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -9,24 +10,18 @@ import 'package:spreadsheet_decoder/spreadsheet_decoder.dart';
 /// Main class for thumbnailer plugin
 class Thumbnailer {
   ///Map which contains mimeType-IconData relation
-  static final Map<String, IconData> _mimeTypeToIconDataMap =
-      <String, IconData>{
+  static final Map<String, IconData> _mimeTypeToIconDataMap = <String, IconData>{
     'image': FontAwesomeIcons.image,
     'application/pdf': FontAwesomeIcons.filePdf,
     'application/msword': FontAwesomeIcons.fileWord,
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-        FontAwesomeIcons.fileWord,
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': FontAwesomeIcons.fileWord,
     'application/vnd.oasis.opendocument.text': FontAwesomeIcons.fileWord,
     'application/vnd.ms-excel': FontAwesomeIcons.fileExcel,
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-        FontAwesomeIcons.fileExcel,
-    'application/vnd.oasis.opendocument.spreadsheet':
-        FontAwesomeIcons.fileExcel,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': FontAwesomeIcons.fileExcel,
+    'application/vnd.oasis.opendocument.spreadsheet': FontAwesomeIcons.fileExcel,
     'application/vnd.ms-powerpoint': FontAwesomeIcons.filePowerpoint,
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-        FontAwesomeIcons.filePowerpoint,
-    'application/vnd.oasis.opendocument.presentation':
-        FontAwesomeIcons.filePowerpoint,
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': FontAwesomeIcons.filePowerpoint,
+    'application/vnd.oasis.opendocument.presentation': FontAwesomeIcons.filePowerpoint,
     'text/plain': FontAwesomeIcons.fileLines,
     'text/csv': FontAwesomeIcons.fileCsv,
     'application/x-archive': FontAwesomeIcons.fileZipper,
@@ -105,8 +100,7 @@ class Thumbnailer {
   };
 
   ///Map which contains strategy of creating thumbnail widget
-  static final Map<String, GenerationStrategyFunction> _generationStrategies =
-      <String, GenerationStrategyFunction>{
+  static final Map<String, GenerationStrategyFunction> _generationStrategies = <String, GenerationStrategyFunction>{
     'image': (
       String? name,
       String mimeType,
@@ -137,15 +131,18 @@ class Thumbnailer {
       final Uint8List resolvedData = await getData();
       final PdfDocument document = await PdfDocument.openData(resolvedData);
       final PdfPage page = await document.getPage(1);
+      final double targetWidth = widgetSize * (page.width / min(page.width, page.height)) * 2; // assume dpr of 2
+      final double targetHeight = widgetSize * (page.height / min(page.width, page.height)) * 2;
       final PdfPageImage pageImage = (await page.render(
-        width: page.width,
-        height: page.height,
+        width: targetWidth,
+        height: targetHeight,
       ))!;
       // ignore: unawaited_futures
       Future.wait<void>(<Future<void>>[
         page.close(),
         document.close(),
       ]);
+      debugPrint("ThumbnailSize: ${pageImage.bytes.length}");
       return Center(
         child: Image.memory(
           pageImage.bytes,
@@ -201,14 +198,10 @@ class Thumbnailer {
   ) async {
     assert(decoration != null);
     final Uint8List resolvedData = await dataResolver();
-    final SpreadsheetDecoder decoder =
-        SpreadsheetDecoder.decodeBytes(resolvedData.toList());
+    final SpreadsheetDecoder decoder = SpreadsheetDecoder.decodeBytes(resolvedData.toList());
     final List<List<dynamic>> rowsS = decoder.tables.entries.first.value.rows;
-    final int columnsCount =
-        rowsS.length > widgetSize ~/ 17 ? widgetSize ~/ 17 : rowsS.length;
-    final int rowsCount = rowsS.first.length > widgetSize ~/ 30
-        ? widgetSize ~/ 30
-        : rowsS.first.length;
+    final int columnsCount = rowsS.length > widgetSize ~/ 17 ? widgetSize ~/ 17 : rowsS.length;
+    final int rowsCount = rowsS.first.length > widgetSize ~/ 30 ? widgetSize ~/ 30 : rowsS.first.length;
     final List<Row> rows = <Row>[];
     final double rowWidth = widgetSize / (rowsCount + 1);
     final double rowHeight = widgetSize / columnsCount;
@@ -285,10 +278,7 @@ class Thumbnailer {
                         overflow: TextOverflow.ellipsis,
                         maxLines: (constraints.maxHeight / fontSize).floor(),
                         textAlign: TextAlign.left,
-                        style: TextStyle(
-                            fontSize: fontSize,
-                            fontWeight: FontWeight.w900,
-                            color: decoration!.textColor),
+                        style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w900, color: decoration!.textColor),
                       ),
                     );
                   },
@@ -339,8 +329,7 @@ class Thumbnailer {
   }
 
   ///Adds custom mappings to [_mimeTypeToIconDataMap]
-  static void addCustomMimeTypesToIconDataMappings(
-      Map<String, IconData> mappings) {
+  static void addCustomMimeTypesToIconDataMappings(Map<String, IconData> mappings) {
     _mimeTypeToIconDataMap.addAll(mappings);
   }
 
@@ -418,8 +407,7 @@ class ThumbnailState extends State<Thumbnail> {
   @override
   void initState() {
     super.initState();
-    final GenerationStrategyFunction? generationStrategyFunction =
-        _getIconByMimeType(
+    final GenerationStrategyFunction? generationStrategyFunction = _getIconByMimeType(
       Thumbnailer._generationStrategies,
       widget.mimeType,
       '/',
@@ -449,9 +437,7 @@ class ThumbnailState extends State<Thumbnail> {
           }
           if (snapshot.connectionState == ConnectionState.done) {
             return _wrapThumbnail(
-              _applyMetadataWatermark(widget.onlyName ?? false
-                  ? snapshot.data ?? Container()
-                  : snapshot.data ?? _createIcon()),
+              _applyMetadataWatermark(widget.onlyName ?? false ? snapshot.data ?? Container() : snapshot.data ?? _createIcon()),
             );
           } else {
             return Container(
@@ -490,8 +476,7 @@ class ThumbnailState extends State<Thumbnail> {
       );
     } else {
       throw FileThumbnailsException(
-        message:
-            "Couldn't create thumbnail, unknown mime type: ${widget.mimeType}."
+        message: "Couldn't create thumbnail, unknown mime type: ${widget.mimeType}."
             " Didn't you forget to register custom mimetype/icon mapping?",
       );
     }
@@ -500,8 +485,7 @@ class ThumbnailState extends State<Thumbnail> {
   ///Internal helper function which extracts [T] value from [mapToExtractFrom].
   ///Function is cutting from end of [mimeType] until [mimeType] contains [divider] or map keys
   ///contains cut string
-  static T? _getIconByMimeType<T>(
-      Map<String, T> mapToExtractFrom, String mimeType, String divider) {
+  static T? _getIconByMimeType<T>(Map<String, T> mapToExtractFrom, String mimeType, String divider) {
     if (mapToExtractFrom.containsKey(mimeType)) {
       return mapToExtractFrom[mimeType];
     }
@@ -538,8 +522,7 @@ class ThumbnailState extends State<Thumbnail> {
   ///Applies watermark (file name) on widget if (widget.onlyName ?? true)
   ///Positions of name and dataSize are fixed
   Widget _applyMetadataWatermark(Widget thumbnail) {
-    final double heightWidget =
-        widget.widgetSize * (widget.onlyName ?? false ? 1 : 0.35);
+    final double heightWidget = widget.widgetSize * (widget.onlyName ?? false ? 1 : 0.35);
     final int numberOfLinesInNameWidget = (heightWidget - 5) ~/ 11;
     if (widget.useWaterMark ?? true) {
       return Center(
@@ -574,8 +557,7 @@ class ThumbnailState extends State<Thumbnail> {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: widget.decoration?.textColor ??
-                                      Colors.black,
+                                  color: widget.decoration?.textColor ?? Colors.black,
                                 ),
                               ),
                             ),
@@ -610,8 +592,7 @@ class ThumbnailState extends State<Thumbnail> {
                             softWrap: true,
                             textScaleFactor: 1.0,
                             style: TextStyle(
-                              color:
-                                  widget.decoration?.textColor ?? Colors.black,
+                              color: widget.decoration?.textColor ?? Colors.black,
                               fontSize: 11,
                               height: 1,
                               fontStyle: FontStyle.normal,
