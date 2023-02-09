@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:isolate';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -100,13 +101,15 @@ class Thumbnailer {
     'default': FontAwesomeIcons.file,
   };
 
-  static Future<PdfPageImage> _buildPdf(Uint8List resolvedData, RootIsolateToken rootIsolateToken) async {
+  static Future<PdfPageImage> _buildPdf(Uint8List resolvedData, double targetSize, RootIsolateToken rootIsolateToken) async {
     BackgroundIsolateBinaryMessenger.ensureInitialized(rootIsolateToken);
     final PdfDocument document = await PdfDocument.openData(resolvedData);
     final PdfPage page = await document.getPage(1);
+    double targetWidth = targetSize * (page.width / min(page.width, page.height));
+    double targetHeight = targetSize * (page.height / min(page.width, page.height));
     final PdfPageImage pageImage = (await page.render(
-      width: page.width,
-      height: page.height,
+      width: targetWidth,
+      height: targetHeight,
     ))!;
     // ignore: unawaited_futures
     Future.wait<void>(<Future<void>>[
@@ -148,7 +151,7 @@ class Thumbnailer {
     ) async {
       final Uint8List resolvedData = await getData();
       final RootIsolateToken token = RootIsolateToken.instance!;
-      final PdfPageImage pageImage = await Isolate.run(() async => _buildPdf(resolvedData, token));
+      final PdfPageImage pageImage = await Isolate.run(() async => _buildPdf(resolvedData, widgetSize, token));
       return Center(
         child: Image.memory(
           pageImage.bytes,
