@@ -147,6 +147,7 @@ class Thumbnailer {
     ) async {
       final Uint8List resolvedData = await getData();
       final RootIsolateToken token = ServicesBinding.rootIsolateToken!;
+      BackgroundIsolateBinaryMessenger.ensureInitialized(token);
       final PdfPageImage pageImage = await Isolate.run(() async => _buildPdf(resolvedData, token));
       return Center(
         child: Image.memory(
