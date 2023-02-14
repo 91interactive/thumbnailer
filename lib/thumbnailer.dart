@@ -387,6 +387,7 @@ class Thumbnail extends StatefulWidget {
     this.useWrapper,
     this.onlyName,
     this.thumbnailKey,
+    this.errorBuilder,
   }) : super(key: key);
 
   /// If non-null, the style to use for this thumbnail.
@@ -419,7 +420,11 @@ class Thumbnail extends StatefulWidget {
   /// Show only name for watermark thumbnail
   final bool? onlyName;
 
+  /// Unique key for the thumbnail, will cache images under this key
   final String? thumbnailKey;
+
+  /// Widget that should be created when an error is thrown
+  final Widget Function()? errorBuilder;
 
   @override
   ThumbnailState createState() => ThumbnailState();
@@ -458,6 +463,9 @@ class ThumbnailState extends State<Thumbnail> {
         future: _thumbnailFuture,
         builder: (BuildContext context, AsyncSnapshot<Widget> snapshot) {
           if (snapshot.hasError) {
+            if (widget.errorBuilder != null) {
+              return widget.errorBuilder!();
+            }
             // ignore: only_throw_errors
             throw snapshot.error!;
           }
